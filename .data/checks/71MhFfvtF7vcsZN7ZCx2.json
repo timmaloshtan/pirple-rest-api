@@ -1,1 +1,1 @@
-{"id":"71MhFfvtF7vcsZN7ZCx2","userPhone":"0951112222","protocol":"https","url":"youtube.com/","method":"get","successCodes":[200,201],"timeoutSeconds":3}
+{"id":"71MhFfvtF7vcsZN7ZCx2","userPhone":"0951112222","protocol":"https","url":"gitkraken.com","method":"delete","successCodes":[400,404],"timeoutSeconds":5}
