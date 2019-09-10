@@ -70,6 +70,12 @@ app.client.request = async ({
 
 // Bind the forms
 app.bindForms = () => {
+  const form = document.querySelector('form');
+
+  if (!form) {
+    return;
+  }
+  
   document.querySelector('form').addEventListener('submit', async function(e) {
 
     // Prevent default form behavior
@@ -122,16 +128,172 @@ app.bindForms = () => {
 };
 
 // Form response processor
-app.formResponseProcessor = function(formId,requestPayload,responsePayload){
+app.formResponseProcessor = async function(formId,requestPayload,responsePayload){
   var functionToCall = false;
-  if(formId == 'accountCreate'){
-    // @TODO Do something here now that the account has been created successfully
+  if (formId == 'accountCreate') {
+    const { phone, password } = requestPayload;
+    const path = 'api/tokens';
+    const method = 'POST';
+
+    try {
+      const { statusCode, payload: loginResponse } = await app.client.request({
+        path,
+        method,
+        payload: {
+          phone,
+          password,
+        },
+      });
+
+      if (statusCode === 200) {
+        // Is successfull, set the token and redirect the user
+        app.setSessionToken(loginResponse);
+        window.location = '/checks/all';
+      }
+
+      // Set the formError field with the error text
+      document.querySelector("#"+formId+" .formError").innerHTML = error;
+      // Show (unhide) the form error field on the form
+      document.querySelector("#"+formId+" .formError").style.display = 'block';
+    } catch (error) {
+      console.warn(error);
+    }
   }
+
+  if (formId === 'sessionCreate') {
+    app.setSessionToken(responsePayload);
+    window.location = '/checks/all';
+  }
+};
+
+// Get the session token from local storage
+// and set it in the app.config object
+app.getSessionToken = () => {
+  const tokenString = localStorage.getItem('token');
+  if (typeof(tokenString) !== 'string') {
+    return;
+  }
+
+  try {
+    const token = JSON.parse(tokenString);
+    app.config.sessionToken = token;
+
+    if (typeof(token) === 'object') {
+      return app.setLoggedInClass(true);
+    }
+  
+    app.setLoggedInClass(false);
+  } catch (error) {
+    app.config.sessionToken = false;
+    app.setLoggedInClass(false);
+  }
+};
+
+// Set (or remove) the loggedIn class from the body
+app.setLoggedInClass = add => {
+  var target = document.querySelector("body");
+
+  if (add) {
+    return target.classList.add('loggedIn');
+  }
+  
+  target.classList.remove('loggedIn');
+};
+
+// Set the session token in the app.congig object
+// and to local storage
+app.setSessionToken = token => {
+  app.config.sessionToken = token;
+  const tokenString = JSON.stringify(token);
+  localStorage.setItem('token', tokenString);
+
+  if (typeof(token) === 'object') {
+    return app.setLoggedInClass(true);
+  }
+
+  app.setLoggedInClass(false);
+}
+
+// Renew the token
+app.renewToken = async () => {
+  const { sessionToken } = app.config;
+
+  if (!sessionToken) {
+    app.setSessionToken(false);
+    return true;
+  }
+
+  const payload = {
+    id: sessionToken.id,
+    extend: true,
+  };
+  const path = 'api/tokens';
+  let method = 'PUT';
+
+  // Update the token with a new expiration
+  try {
+    const { statusCode } = await app.client.request({
+      path,
+      method,
+      payload,
+    });
+
+    if (statusCode !== 200) {
+      app.setSessionToken(false);
+      return true;
+    }
+  } catch (error) {
+    console.warn(error);
+  }
+
+  const queryStringObject = { id: sessionToken.id };
+  method = 'GET';
+
+  // Get the new token details
+  try {
+    const { statusCode, payload } = await app.client.request({
+      path,
+      method,
+      queryStringObject,
+    });
+
+    if (statusCode !== 200) {
+      app.setSessionToken(false);
+      return true;
+    }
+
+    app.setSessionToken(payload);
+    return false;
+  } catch (error) {
+    console.warn(error);
+  }
+};
+
+// Loop to renew token
+app.tokenRenewalLoop = () => {
+  setInterval(
+    async () => {
+      const err = await app.renewToken();
+
+      if (!err) {
+        console.log("Token renewed successfully @ "+Date.now());
+      }
+    },
+    1000 * 60,
+  );
 };
 
 // Init (bootstraping)
 app.init = () => {
+
+  // Bind all form submissions
   app.bindForms();
+
+  // Get the token from local storage
+  app.getSessionToken();
+
+  // Renew token
+  app.tokenRenewalLoop();
 };
 
 // Call the init process after the window loads
