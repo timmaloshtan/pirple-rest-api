@@ -28,10 +28,10 @@ app.client.request = async ({
 
   const requestUrl = `${path}${queryString ? '?' : ''}${queryString}`;
 
-  return new Promise ((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     // Form the http request as a JSON type
     const xhr = new XMLHttpRequest();
-  
+
     xhr.open(method, requestUrl, true);
     xhr.setRequestHeader("Content-Type", 'application/json');
 
@@ -52,7 +52,7 @@ app.client.request = async ({
         const { status: statusCode, responseText } = xhr;
 
         try {
-           resolve({
+          resolve({
             statusCode,
             payload: JSON.parse(responseText),
           });
@@ -104,60 +104,69 @@ app.bindForms = () => {
   if (!form) {
     return;
   }
-  
-  document.querySelector('form').addEventListener('submit', async function(e) {
 
-    // Prevent default form behavior
-    e.preventDefault();
-    const formId = this.id;
-    const path = this.action;
-    const method = this.method.toUpperCase();
+  const allForms = document.querySelectorAll('form');
+  Array.from(allForms).forEach(form => {
+    form.addEventListener('submit', async function (e) {
 
-    // Hide the error message (if it's currently shown due to a previous error)
-    const error = document.querySelector(`#${formId}.formError`);
-    if (error) {
-      error.style.display = 'hidden';
-    }
-  
-    // Turn the inputs into a payload
-    const payload = Array.from(this.elements)
-      .filter(element => element.type !== 'submit')
-      .reduce((pld, element) => ({
-        ...pld,
-        [element.name]: element.type === 'checkbox'
-          ? element.checked
-          : element.value,
-      }), {});
-  
-  
-    // Call the Api
-    try {
-      const { statusCode, payload: responsePayload } = await app.client.request({
-        path,
-        method,
-        payload,
-      });
+      // Prevent default form behavior
+      e.preventDefault();
+      const formId = this.id;
+      const path = this.action;
+      const method = this.method.toUpperCase();
 
-      if (statusCode === 200) {
-        return app.formResponseProcessor(formId, payload, responsePayload);
+      // Hide the error message (if it's currently shown due to a previous error)
+      const error = document.querySelector(`#${formId}.formError`);
+      if (error) {
+        error.style.display = 'hidden';
       }
 
-      // Try to get the error from api
-      const { error = 'An error has occured, please try again' } = responsePayload;
+      // Hide the success message
+      const success = document.querySelector(`#${formId}.formSuccess`);
+      if (success) {
+        success.style.display = 'hidden';
+      }
 
-      // Set the formError field with the error text
-      document.querySelector("#"+formId+" .formError").innerHTML = error;
-      // Show (unhide) the form error field on the form
-      document.querySelector("#"+formId+" .formError").style.display = 'block';
-      
-    } catch (error) {
-      console.warn(error);
-    }
+      // Turn the inputs into a payload
+      const payload = Array.from(this.elements)
+        .filter(element => element.type !== 'submit')
+        .reduce((pld, element) => ({
+          ...pld,
+          [element.name]: element.type === 'checkbox'
+            ? element.checked
+            : element.value,
+        }), {});
+
+
+      // Call the Api
+      try {
+        const { statusCode, payload: responsePayload } = await app.client.request({
+          path,
+          method,
+          payload,
+        });
+
+        if (statusCode === 200) {
+          return app.formResponseProcessor(formId, payload, responsePayload);
+        }
+
+        // Try to get the error from api
+        const { error = 'An error has occured, please try again' } = responsePayload;
+
+        // Set the formError field with the error text
+        document.querySelector("#" + formId + " .formError").innerHTML = error;
+        // Show (unhide) the form error field on the form
+        document.querySelector("#" + formId + " .formError").style.display = 'block';
+
+      } catch (error) {
+        console.warn(error);
+      }
+    });
   });
 };
 
 // Form response processor
-app.formResponseProcessor = async function(formId,requestPayload,responsePayload){
+app.formResponseProcessor = async function (formId, requestPayload, responsePayload) {
   var functionToCall = false;
   if (formId == 'accountCreate') {
     const { phone, password } = requestPayload;
@@ -181,9 +190,9 @@ app.formResponseProcessor = async function(formId,requestPayload,responsePayload
       }
 
       // Set the formError field with the error text
-      document.querySelector("#"+formId+" .formError").innerHTML = error;
+      document.querySelector("#" + formId + " .formError").innerHTML = error;
       // Show (unhide) the form error field on the form
-      document.querySelector("#"+formId+" .formError").style.display = 'block';
+      document.querySelector("#" + formId + " .formError").style.display = 'block';
     } catch (error) {
       console.warn(error);
     }
@@ -199,7 +208,7 @@ app.formResponseProcessor = async function(formId,requestPayload,responsePayload
 // and set it in the app.config object
 app.getSessionToken = () => {
   const tokenString = localStorage.getItem('token');
-  if (typeof(tokenString) !== 'string') {
+  if (typeof (tokenString) !== 'string') {
     return;
   }
 
@@ -207,10 +216,10 @@ app.getSessionToken = () => {
     const token = JSON.parse(tokenString);
     app.config.sessionToken = token;
 
-    if (typeof(token) === 'object') {
+    if (typeof (token) === 'object') {
       return app.setLoggedInClass(true);
     }
-  
+
     app.setLoggedInClass(false);
   } catch (error) {
     app.config.sessionToken = false;
@@ -225,7 +234,7 @@ app.setLoggedInClass = add => {
   if (add) {
     return target.classList.add('loggedIn');
   }
-  
+
   target.classList.remove('loggedIn');
 };
 
@@ -236,7 +245,7 @@ app.setSessionToken = token => {
   const tokenString = JSON.stringify(token);
   localStorage.setItem('token', tokenString);
 
-  if (typeof(token) === 'object') {
+  if (typeof (token) === 'object') {
     return app.setLoggedInClass(true);
   }
 
@@ -298,6 +307,31 @@ app.renewToken = async () => {
   }
 };
 
+// Load data on the page
+app.loadDataOnPage = () => {
+  // Get current page from the body class
+  const bodyClasses = document.querySelector('body').classList;
+  const [primaryClass] = bodyClasses;
+
+  // Logic for account settings page
+  if (primaryClass === 'accountEdit') {
+    app.loadAccountEditPage();
+  }
+};
+
+// Load the account edit page specifically
+app.loadAccountEditPage = async () => {
+  // Get the phone number from current token
+  // Log out if there is none
+  const { phone } = app.config.sessionToken;
+
+  if (!phone) {
+    return app.logUserOut();
+  }
+
+  
+};
+
 // Loop to renew token
 app.tokenRenewalLoop = () => {
   setInterval(
@@ -305,7 +339,7 @@ app.tokenRenewalLoop = () => {
       const err = await app.renewToken();
 
       if (!err) {
-        console.log("Token renewed successfully @ "+Date.now());
+        console.log("Token renewed successfully @ " + Date.now());
       }
     },
     1000 * 60,
@@ -326,6 +360,9 @@ app.init = () => {
 
   // Renew token
   app.tokenRenewalLoop();
+
+  // Load data on page
+  app.loadDataOnPage();
 };
 
 // Call the init process after the window loads
