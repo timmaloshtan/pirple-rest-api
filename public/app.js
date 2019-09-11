@@ -68,6 +68,35 @@ app.client.request = async ({
   });
 };
 
+// Bind the logout button
+app.bindLogoutButton = () => {
+  document.getElementById('logoutButton').addEventListener('click', e => {
+    e.preventDefault();
+
+    app.logUserOut();
+  });
+};
+
+// Log the user out then redirect to /sessionDeleted
+app.logUserOut = async () => {
+  // Get current token id
+  const { id } = app.config.sessionToken;
+
+  var queryStringObject = { id };
+
+  await app.client.request({
+    path: 'api/tokens',
+    method: 'DELETE',
+    queryStringObject,
+  });
+
+  // Clear the token from front
+  app.setSessionToken(false);
+
+  // Send the user to the logged out page
+  window.location = '/session/deleted';
+}
+
 // Bind the forms
 app.bindForms = () => {
   const form = document.querySelector('form');
@@ -288,6 +317,9 @@ app.init = () => {
 
   // Bind all form submissions
   app.bindForms();
+
+  // Bind logout button
+  app.bindLogoutButton();
 
   // Get the token from local storage
   app.getSessionToken();
