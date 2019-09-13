@@ -43,7 +43,7 @@ app.client.request = async ({
     // If there is a current session token
     // add that as a header as well
     if (app.config.sessionToken) {
-      xhr.setRequestHeader('token', app.config.sessionToken);
+      xhr.setRequestHeader('token', app.config.sessionToken.id);
     }
 
     // Handle the reponse
@@ -113,7 +113,7 @@ app.bindForms = () => {
       e.preventDefault();
       const formId = this.id;
       const path = this.action;
-      const method = this.method.toUpperCase();
+      let method = this.method.toUpperCase();
 
       // Hide the error message (if it's currently shown due to a previous error)
       const error = document.querySelector(`#${formId}.formError`);
@@ -128,15 +128,24 @@ app.bindForms = () => {
       }
 
       // Turn the inputs into a payload
-      const payload = Array.from(this.elements)
-        .filter(element => element.type !== 'submit')
-        .reduce((pld, element) => ({
-          ...pld,
-          [element.name]: element.type === 'checkbox'
-            ? element.checked
-            : element.value,
-        }), {});
+      const payload = {};
+      Array.from(this.elements).forEach(
+        element => {
+          if (element.type === 'submit') {
+            return;
+          }
 
+          if (element.type === 'checkbox') {
+            return payload[element.name] = element.checked;
+          }
+
+          if (element.name === '_method') {
+            return method = element.value;
+          }
+
+          payload[element.name] = element.value;
+        }
+      );
 
       // Call the Api
       try {
@@ -329,7 +338,33 @@ app.loadAccountEditPage = async () => {
     return app.logUserOut();
   }
 
-  
+  const queryStringObject = { phone };
+
+  try {
+    const { statusCode, payload } = await app.client.request({
+      path: 'api/users',
+      method: 'GET',
+      queryStringObject
+    });
+
+    if (statusCode !== 200) {
+      return app.logUserOut();
+    }
+
+    // Put the data into the forms as values where needed
+    document.querySelector("#accountEdit1 .firstNameInput").value = payload.firstName;
+    document.querySelector("#accountEdit1 .lastNameInput").value = payload.lastName;
+    document.querySelector("#accountEdit1 .displayPhoneInput").value = payload.phone;
+
+    // Put the hidden phone field into both forms
+    const hiddenPhoneInputs = document.querySelectorAll("input.hiddenPhoneNumberInput");
+
+    Array.from(hiddenPhoneInputs).forEach(
+      input => input.value = payload.phone,
+    );
+  } catch (error) {
+    console.warn(error);
+  }
 };
 
 // Loop to renew token
