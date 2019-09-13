@@ -211,6 +211,18 @@ app.formResponseProcessor = async function (formId, requestPayload, responsePayl
     app.setSessionToken(responsePayload);
     window.location = '/checks/all';
   }
+
+  // If the user just deleted their account, redirect them to the account-delete page
+  if(formId == 'accountEdit3'){
+    app.logUserOut(false);
+    window.location = '/account/deleted';
+  }
+
+  // If forms saved successfully and they have success messages, show them
+  const formsWithSuccessMessages = ['accountEdit1', 'accountEdit2','checksEdit1'];
+  if(formsWithSuccessMessages.includes(formId)){
+    document.querySelector("#"+formId+" .formSuccess").style.display = 'block';
+  }
 };
 
 // Get the session token from local storage
