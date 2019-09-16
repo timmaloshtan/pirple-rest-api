@@ -114,6 +114,7 @@ app.bindForms = () => {
       const formId = this.id;
       const path = this.action;
       let method = this.method.toUpperCase();
+      let queryStringObject;
 
       // Hide the error message (if it's currently shown due to a previous error)
       const error = document.querySelector(`#${formId}.formError`);
@@ -128,7 +129,7 @@ app.bindForms = () => {
       }
 
       // Turn the inputs into a payload
-      const payload = {};
+      let payload = {};
       Array.from(this.elements).forEach(
         element => {
           if (element.type === 'submit') {
@@ -147,12 +148,18 @@ app.bindForms = () => {
         }
       );
 
+      if (method === 'DELETE') {
+        queryStringObject = payload || {};
+        payload = undefined;
+      }
+
       // Call the Api
       try {
         const { statusCode, payload: responsePayload } = await app.client.request({
           path,
           method,
           payload,
+          queryStringObject,
         });
 
         if (statusCode === 200) {
