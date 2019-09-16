@@ -132,19 +132,37 @@ app.bindForms = () => {
       let payload = {};
       Array.from(this.elements).forEach(
         element => {
+          const value = element.classList.contains('intval')
+            ? parseInt(element.value)
+            : element.value;
+          
           if (element.type === 'submit') {
             return;
           }
 
-          if (element.type === 'checkbox') {
+          if (element.type === 'checkbox' && !element.classList.contains('multiselect')) {
             return payload[element.name] = element.checked;
           }
 
           if (element.name === '_method') {
-            return method = element.value;
+            return method = value;
           }
 
-          payload[element.name] = element.value;
+          if (element.name === 'httpmethod') {
+            return payload.method = value;
+          }
+
+          if (element.classList.contains('multiselect')) {
+            if (!element.checked) {
+              return;
+            }
+            payload[element.name] = payload[element.name] instanceof Array
+              ? payload[element.name]
+              : [];
+            return element.checked && payload[element.name].push(value);
+          }
+
+          payload[element.name] = value;
         }
       );
 
@@ -223,6 +241,11 @@ app.formResponseProcessor = async function (formId, requestPayload, responsePayl
   if(formId == 'accountEdit3'){
     app.logUserOut(false);
     window.location = '/account/deleted';
+  }
+
+  // If the user just created a check, redirect to dashboard
+  if (formId === 'checksCreate') {
+    window.location = '/checks/all';
   }
 
   // If forms saved successfully and they have success messages, show them
