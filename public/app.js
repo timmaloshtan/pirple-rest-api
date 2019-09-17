@@ -368,6 +368,11 @@ app.loadDataOnPage = () => {
   if (primaryClass === 'accountEdit') {
     app.loadAccountEditPage();
   }
+
+  // Logic for dashboard page
+  if (primaryClass === 'checkList') {
+    app.loadCheckListPage();
+  }
 };
 
 // Load the account edit page specifically
@@ -408,6 +413,88 @@ app.loadAccountEditPage = async () => {
     console.warn(error);
   }
 };
+
+// Load the dashboard page specifically
+app.loadCheckListPage = async () => {
+  // Get the phone number from current token
+  // Log out if there is none
+  const { phone } = app.config.sessionToken;
+
+  if (!phone) {
+    return app.logUserOut();
+  }
+
+  const queryStringObject = { phone };
+
+  try {
+    const { statusCode, payload } = await app.client.request({
+      path: 'api/users',
+      method: 'GET',
+      queryStringObject
+    });
+
+    if (statusCode !== 200) {
+      return app.logUserOut();
+    }
+
+    const checks = payload.checks instanceof Array
+      ? payload.checks
+      : [];
+
+    if (!checks.length) {
+      // Show 'you have no checks' message
+      document.getElementById('noChecksMessage').style.display = 'table-row';
+
+      // Show the createCheck CTA
+      document.getElementById("createCheckCTA").style.display = 'block';
+
+      return;
+    }
+
+    if(checks.length < 5){
+      // Show the createCheck CTA
+      document.getElementById("createCheckCTA").style.display = 'block';
+    }
+
+    const checksRequests = await Promise.all(
+      checks.map(async id => {
+        const { statusCode, payload } = await app.client.request({
+          path: 'api/checks',
+          method: 'GET',
+          queryStringObject: { id }
+        });
+
+        if (statusCode !== 200) {
+          console.warn(`Error downloading data for ${id} check`);
+          return undefined;
+        }
+
+        return payload;
+      }),
+    );
+
+    const checksData = checksRequests.filter(result => result !== undefined);
+    
+    checksData.forEach(check => {
+      const table = document.getElementById('checksListTable');
+      const tr = table.insertRow(-1);
+      tr.classList.add('checkRow');
+      const td0 = tr.insertCell(0);
+      const td1 = tr.insertCell(1);
+      const td2 = tr.insertCell(2);
+      const td3 = tr.insertCell(3);
+      const td4 = tr.insertCell(4);
+      td0.innerHTML = check.method.toUpperCase();
+      td1.innerHTML = check.protocol + '://';
+      td2.innerHTML = check.url;
+      const state = check.state || 'unknown';
+      td3.innerHTML = state;
+      td4.innerHTML = '<a href="/checks/edit?id='+check.id+'">View / Edit / Delete</a>';
+    });
+  } catch (error) {
+    console.warn(error);
+  }
+}
 
 // Loop to renew token
 app.tokenRenewalLoop = () => {
