@@ -152,6 +152,11 @@ app.bindForms = () => {
             return payload.method = value;
           }
 
+          // Create an payload field named "id" if the elements name is actually uid
+          if (element.name === 'uid') {
+            return payload.id = value;
+          }
+
           if (element.classList.contains('multiselect')) {
             if (!element.checked) {
               return;
@@ -373,6 +378,11 @@ app.loadDataOnPage = () => {
   if (primaryClass === 'checkList') {
     app.loadCheckListPage();
   }
+
+  // Logic for check details page
+  if (primaryClass === 'checksEdit') {
+    app.loadChecksEditPage();
+  }
 };
 
 // Load the account edit page specifically
@@ -495,6 +505,57 @@ app.loadCheckListPage = async () => {
     console.warn(error);
   }
 }
+
+// Load checks edit page specifically
+app.loadChecksEditPage = async () => {
+  // Get the check id from the query string
+  // Redirect to dashboard if there is no id
+  const idMatch = window.location.search.match(/id=(\w{20})/i);
+  const id = idMatch
+    ? idMatch[1]
+    : '';
+
+  if (!id) {
+    return window.location = '/checks/all';
+  }
+
+  const queryStringObject = { id };
+
+  try {
+    // Get check data
+    const { statusCode, payload } = await app.client.request({
+      path: 'api/checks',
+      method: 'GET',
+      queryStringObject,
+    });
+
+    if (statusCode !== 200) {
+      return window.location = '/checks/all';
+    }
+    
+    // Put the hidden id field into both forms
+    const hiddenIdInputs = document.querySelectorAll('input.hiddenIdInput');
+    Array.from(hiddenIdInputs).forEach(idInput => idInput.value = payload.id);
+
+    // Put the data into the top form as values where needed
+    document.querySelector("#checksEdit1 .displayIdInput").value = payload.id;
+    document.querySelector("#checksEdit1 .displayStateInput").value = payload.state;
+    document.querySelector("#checksEdit1 .protocolInput").value = payload.protocol;
+    document.querySelector("#checksEdit1 .urlInput").value = payload.url;
+    document.querySelector("#checksEdit1 .methodInput").value = payload.method;
+    document.querySelector("#checksEdit1 .timeoutInput").value = payload.timeoutSeconds;
+
+    const successCodeCheckboxes = document.querySelectorAll("#checksEdit1 input.successCodesInput");
+    Array.from(successCodeCheckboxes).forEach(checkbox => {
+      const checkboxValue = parseInt(checkbox.value);
+      if (payload.successCodes.includes(checkboxValue)) {
+        checkbox.checked = true;
+      }
+    });
+  } catch (error) {
+    console.warn(error);
+  }
+};
 
 // Loop to renew token
 app.tokenRenewalLoop = () => {
