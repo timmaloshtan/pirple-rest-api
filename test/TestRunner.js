@@ -2,6 +2,8 @@
  * Test Runner
  */
 
+const helpers = require('../lib/helpers');
+
 function TestRunner(testDictionary) {
   this.testDictionary = testDictionary;
 }
@@ -26,11 +28,8 @@ TestRunner.prototype.runTest = function(testName, testBody) {
 
 TestRunner.prototype.testAsyncCode = function(testName, testBody) {
   const promisisfiedTest = new Promise((resolve, reject) => {
-    try {
-      testBody(resolve);
-    } catch (error) {
-      reject(error);
-    }
+    helpers.ensureAsync(testBody)(resolve)
+      .catch(reject);
   });
 
   promisisfiedTest
