@@ -29,7 +29,10 @@ TestRunner.prototype.runTest = function(testName, testBody) {
 TestRunner.prototype.testAsyncCode = function(testName, testBody) {
   const promisisfiedTest = new Promise((resolve, reject) => {
     helpers.ensureAsync(testBody)(resolve)
-      .catch(reject);
+      .catch(err => {
+        console.log('err :', err);
+        reject(err);
+      });
   });
 
   promisisfiedTest
@@ -45,6 +48,7 @@ TestRunner.prototype.testSyncCode = function(testName, testBody) {
     console.log('\x1b[32m%s\x1b[0m', testName);
     return Promise.resolve();
   } catch (error) {
+    console.log('error :', error);
     console.log('\x1b[31m%s\x1b[0m', testName);
     return Promise.reject(error);
   }
@@ -63,6 +67,7 @@ TestRunner.prototype.presentTestResults = function(testResults) {
   console.log('Failed: ', rejected);
   console.log('-----------------------------------------------');
   console.log('\n');
+  process.exit(0);
 };
 
 module.exports = TestRunner;
